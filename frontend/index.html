@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HFT Practice — Trading Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e1a;
+            color: #e0e6f0;
+            min-height: 100vh;
+        }
+        header {
+            background: #111827;
+            border-bottom: 1px solid #1e3a5f;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { color: #38bdf8; font-size: 20px; font-weight: 600; }
+        .status-badge {
+            background: #064e3b;
+            color: #34d399;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+        .card {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            padding: 24px;
+        }
+        .card h3 { font-size: 13px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card .value { font-size: 28px; font-weight: 700; color: #f1f5f9; }
+        .card .value.green { color: #34d399; }
+        .card .value.blue  { color: #38bdf8; }
+        .card .value.yellow{ color: #fbbf24; }
+        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #94a3b8; }
+        .trade-form {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+        .form-row { display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 12px; align-items: end; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #f1f5f9;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus, select:focus { border-color: #38bdf8; }
+        button {
+            background: #0369a1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        button:hover { background: #0284c7; }
+        button.sell { background: #991b1b; }
+        button.sell:hover { background: #b91c1c; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #1e293b;
+        }
+        td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid #1e293b; }
+        tr:last-child td { border-bottom: none; }
+        .badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge.EXECUTED  { background: #064e3b; color: #34d399; }
+        .badge.PENDING   { background: #1e3a5f; color: #38bdf8; }
+        .badge.CANCELLED { background: #292524; color: #78716c; }
+        .badge.FAILED    { background: #450a0a; color: #f87171; }
+        .badge.BUY  { background: #064e3b; color: #34d399; }
+        .badge.SELL { background: #450a0a; color: #f87171; }
+        .api-url {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-family: monospace;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 24px;
+            word-break: break-all;
+        }
+        .error-msg { color: #f87171; font-size: 13px; margin-top: 8px; }
+        #loading { text-align: center; color: #64748b; padding: 40px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>⚡ HFT Practice — Trading Dashboard</h1>
+    <span class="status-badge" id="api-status">● Connecting...</span>
+</header>
+
+<div class="container">
+
+    <!-- API URL -->
+    <div class="api-url" id="api-url-display">
+        API: Detecting endpoint...
+    </div>
+
+    <!-- Stats -->
+    <div class="grid">
+        <div class="card">
+            <h3>Total Trades</h3>
+            <div class="value blue" id="total-trades">—</div>
+        </div>
+        <div class="card">
+            <h3>Executed</h3>
+            <div class="value green" id="executed-trades">—</div>
+        </div>
+        <div class="card">
+            <h3>Pending</h3>
+            <div class="value yellow" id="pending-trades">—</div>
+        </div>
+    </div>
+
+    <!-- Trade Form -->
+    <div class="trade-form">
+        <div class="section-title">Place Trade Order</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Symbol</label>
+                <input type="text" id="symbol" placeholder="AAPL" value="AAPL">
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="trade-type">
+                    <option value="BUY">BUY</option>
+                    <option value="SELL">SELL</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" id="quantity" placeholder="100" value="100" step="1">
+            </div>
+            <div class="form-group">
+                <label>Price</label>
+                <input type="number" id="price" placeholder="185.50" value="185.50" step="0.01">
+            </div>
+            <button id="submit-btn" onclick="submitTrade()">Submit Order</button>
+        </div>
+        <div class="error-msg" id="form-error"></div>
+    </div>
+
+    <!-- Trade Table -->
+    <div class="card">
+        <div class="section-title">Recent Trades</div>
+        <div id="loading">Loading trades...</div>
+        <table id="trade-table" style="display:none">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Symbol</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total Value</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody id="trade-tbody"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    // ─── API Configuration ────────────────────────────────────────────────────
+    // Automatically detects the API endpoint based on environment.
+    // In production: served behind CloudFront/ALB, api-gateway is on /api/
+    // In local dev:  api-gateway runs on port 8000
+    const API_BASE = window.location.hostname === 'localhost'
+        ? 'http://localhost:8000'
+        : '';  // Same origin when served via ALB/CloudFront
+
+    document.getElementById('api-url-display').textContent =
+        `API: ${API_BASE || window.location.origin}/api/trades/`;
+
+    // ─── Load Trades ──────────────────────────────────────────────────────────
+    async function loadTrades() {
+        try {
+            const res = await fetch(`${API_BASE}/api/trades/`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const trades = data.results || data;
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('trade-table').style.display = 'table';
+
+            // Update stats
+            document.getElementById('total-trades').textContent = trades.length;
+            document.getElementById('executed-trades').textContent =
+                trades.filter(t => t.status === 'EXECUTED').length;
+            document.getElementById('pending-trades').textContent =
+                trades.filter(t => t.status === 'PENDING').length;
+
+            // Render table
+            const tbody = document.getElementById('trade-tbody');
+            tbody.innerHTML = trades.length === 0
+                ? '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:32px">No trades yet — place your first order above</td></tr>'
+                : trades.map(t => `
+                    <tr>
+                        <td style="color:#64748b">#${t.id}</td>
+                        <td style="font-weight:600">${t.symbol}</td>
+                        <td><span class="badge ${t.trade_type}">${t.trade_type}</span></td>
+                        <td>${Number(t.quantity).toLocaleString()}</td>
+                        <td>$${Number(t.price).toFixed(2)}</td>
+                        <td>$${Number(t.total_value).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                        <td><span class="badge ${t.status}">${t.status}</span></td>
+                        <td style="color:#64748b">${new Date(t.created_at).toLocaleString()}</td>
+                    </tr>`).join('');
+
+            document.getElementById('api-status').textContent = '● API Connected';
+            document.getElementById('api-status').style.background = '#064e3b';
+            document.getElementById('api-status').style.color = '#34d399';
+
+        } catch (err) {
+            document.getElementById('loading').textContent =
+                `Cannot reach API Gateway: ${err.message}. Make sure the ECS service is running.`;
+            document.getElementById('api-status').textContent = '● API Offline';
+            document.getElementById('api-status').style.background = '#450a0a';
+            document.getElementById('api-status').style.color = '#f87171';
+        }
+    }
+
+    // ─── Submit Trade ─────────────────────────────────────────────────────────
+    async function submitTrade() {
+        const btn = document.getElementById('submit-btn');
+        const errorEl = document.getElementById('form-error');
+        errorEl.textContent = '';
+
+        const payload = {
+            symbol:     document.getElementById('symbol').value.trim().toUpperCase(),
+            trade_type: document.getElementById('trade-type').value,
+            quantity:   document.getElementById('quantity').value,
+            price:      document.getElementById('price').value,
+        };
+
+        if (!payload.symbol || !payload.quantity || !payload.price) {
+            errorEl.textContent = 'Please fill in all fields.';
+            return;
+        }
+
+        btn.textContent = 'Submitting...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/trades/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(JSON.stringify(err));
+            }
+
+            await loadTrades();
+            btn.textContent = '✓ Order Placed!';
+            setTimeout(() => {
+                btn.textContent = 'Submit Order';
+                btn.disabled = false;
+            }, 2000);
+
+        } catch (err) {
+            errorEl.textContent = `Error: ${err.message}`;
+            btn.textContent = 'Submit Order';
+            btn.disabled = false;
+        }
+    }
+
+    // ─── Auto-refresh every 10 seconds ───────────────────────────────────────
+    loadTrades();
+    setInterval(loadTrades, 10000);
+</script>
+</body>
+</html>

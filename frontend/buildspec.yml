@@ -1,0 +1,29 @@
+version: 0.2
+# ─────────────────────────────────────────────────────────────────────────────
+# CodeBuild Buildspec — HFT Practice Frontend
+# Builds nginx Docker image and pushes to ECR
+# ─────────────────────────────────────────────────────────────────────────────
+
+phases:
+  pre_build:
+    commands:
+      - echo "=== Logging in to Amazon ECR ==="
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URL
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+
+  build:
+    commands:
+      - echo "=== Building Frontend Docker image ==="
+      - docker build -t $ECR_REPO_URL:latest -t $ECR_REPO_URL:$IMAGE_TAG .
+
+  post_build:
+    commands:
+      - docker push $ECR_REPO_URL:latest
+      - docker push $ECR_REPO_URL:$IMAGE_TAG
+      - printf '[{"name":"frontend","imageUri":"%s"}]' "$ECR_REPO_URL:latest" > imagedefinitions.json
+      - cat imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
