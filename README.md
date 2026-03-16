@@ -83,3 +83,4 @@ docker run -p 8000:8000 hft-api-gateway
 | CELERY_BROKER_URL | ECS task definition | Redis endpoint |
 | CELERY_RESULT_BACKEND | ECS task definition | Redis endpoint |
 | ENVIRONMENT_TYPE | ECS task definition | practice / production |
+ 
