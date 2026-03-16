@@ -10,7 +10,7 @@
 #   ✅ stdout logging — captured by ECS → CloudWatch automatically
 # ─────────────────────────────────────────────────────────────────────────────
 
-FROM python:3.12-slim
+FROM public.ecr.aws/docker/library/python:3.12-slim
 
 # Prevent Python from writing .pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1

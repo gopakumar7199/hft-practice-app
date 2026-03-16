@@ -4,7 +4,7 @@
 # Mirrors the production HFT-Frontend ECS service
 # ─────────────────────────────────────────────────────────────────────────────
 
-FROM nginx:1.25-alpine
+FROM public.ecr.aws/docker/library/nginx:1.25-alpine
 
 # Remove default nginx page
 RUN rm -rf /usr/share/nginx/html/*
